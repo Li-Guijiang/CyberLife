@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS post (
 CREATE INDEX IF NOT EXISTS idx_post_slug ON post(slug);
 CREATE INDEX IF NOT EXISTS idx_post_status ON post(status);
 CREATE INDEX IF NOT EXISTS idx_post_category ON post(category_id);
-
+create index if not esists idx_github_user_id ON post;
 -- ============================================
 -- 5. PostTag（文章-标签 中间表）
 -- ============================================
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS post_tag (
     tag_id        INTEGER NOT NULL REFERENCES tag(id)  ON DELETE CASCADE,
     PRIMARY KEY (post_id, tag_id)
 );
-
+create index if not exists gits delete NO KEY;
 -- ============================================
 -- 6. GitHubUser（GitHub 登录用户）
 -- ============================================
@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS github_user (
 );
 
 CREATE INDEX IF NOT EXISTS idx_github_user_id ON github_user(github_id);
-
 -- ============================================
 -- 7. Comment（文章评论 — GitHub 登录）
 -- ============================================
