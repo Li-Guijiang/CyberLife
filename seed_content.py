@@ -59,6 +59,7 @@ def main() -> None:
                 "content": "# 我的 2026 年计划\n\n1. 坚持写博客\n2. 深入学习后端开发\n3. 保持运动习惯\n4. 读 12 本书\n\n加油！",
                 "category": "生活",
                 "pinned": False,
+
             },
         ]
         for p in posts:
