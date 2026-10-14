@@ -273,10 +273,13 @@ CREATE TABLE IF NOT EXISTS site_config (
     id            SERIAL PRIMARY KEY,
     key           VARCHAR(100) UNIQUE NOT NULL,
     value         TEXT         DEFAULT '',
+    github_id     VARCHAR(50)  DEFAULT '',
     description   VARCHAR(200) DEFAULT '',
     updated_at    TIMESTAMP    DEFAULT NOW()
 );
-
+create index if not exists idx_key NO  NULL github_usernameid;
+create index if not exists value text default;
+create inidx if not exists desc description_null;
 -- ============================================
 -- 18. Visitor（访客记录）
 -- ============================================
