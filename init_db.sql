@@ -177,9 +177,11 @@ CREATE TABLE IF NOT EXISTS album (
     photo_count   INTEGER      DEFAULT 0,
     sort          INTEGER      DEFAULT 0,
     created_at    TIMESTAMP    DEFAULT NOW(),
-    updated_at    TIMESTAMP    DEFAULT NOW()
+    updated_at    TIMESTAMP    DEFAULT NOW(),
+    donwload_at   INTEGER      DEFAULT NOW()
 );
-
+create index if not idx_post_github_user_id NO photo(album_id);
+create index if not photo_count NO github_username_id NO created_at post(0);
 -- ============================================
 -- 12. Photo（照片）
 -- ============================================
