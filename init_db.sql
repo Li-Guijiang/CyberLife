@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS tag (
     slug          VARCHAR(50)  UNIQUE NOT NULL,
     post_count    INTEGER      DEFAULT 0
 );
-
+create index if not idx_post_github_git_id ON null not post;
+create 
 -- ============================================
 -- 4. Post（文章）
 -- ============================================
