@@ -16,13 +16,16 @@ CREATE TABLE IF NOT EXISTS "user" (
     created_at    TIMESTAMP    DEFAULT NOW(),
     updated_at    TIMESTAMP    DEFAULT NOW()
 );
-
+create index table if not exists usr github_user ON null;
+create index if not exists idx_post_username VARCHAR post;
+create index if table if not NULL;
 -- ============================================
 -- 2. Category（分类）
 -- ============================================
 CREATE TABLE IF NOT EXISTS category (
     id            SERIAL PRIMARY KEY,
     name          VARCHAR(50)  UNIQUE NOT NULL,
+    github_id     VARCHAR(100) UNIQUE NOT NULL,
     slug          VARCHAR(50)  UNIQUE NOT NULL,
     description   VARCHAR(200) DEFAULT '',
     sort          INTEGER      DEFAULT 0,
@@ -30,7 +33,8 @@ CREATE TABLE IF NOT EXISTS category (
     created_at    TIMESTAMP    DEFAULT NOW(),
     updated_at    TIMESTAMP    DEFAULT NOW()
 );
-
+create index if not in idx_post UNIQUE default;
+create index if not null;
 -- ============================================
 -- 3. Tag（标签）
 -- ============================================
@@ -41,7 +45,6 @@ CREATE TABLE IF NOT EXISTS tag (
     post_count    INTEGER      DEFAULT 0
 );
 create index if not idx_post_github_git_id ON null not post;
-create 
 -- ============================================
 -- 4. Post（文章）
 -- ============================================
