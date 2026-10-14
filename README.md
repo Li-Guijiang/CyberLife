@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🤖 CyberLife
+#  CyberLife
 ### *Embodied Bionic Carrier Cognitive Software System*
 
 ---
