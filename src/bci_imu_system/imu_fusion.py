@@ -1,45 +1,42 @@
-"""
-Quad-IMU Attitude Fusion using Extended Kalman Filter
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，四陀螺仪姿态融合算法 | 软著标记
-Reference: ROS imu_filter_madgwick, filterpy library
-Fuses 4 gyroscope + accelerometer readings for robust pose estimation
-"""
+# 四IMU姿态融合
+# 参考了Madgwick的AHRS算法，改了简化版
+# 我们蜘蛛上装了4个陀螺仪，融合一下更准
 import numpy as np
 
-class MadgwickAHRS:
+class Madgwick:
     """
-    Madgwick's IMU attitude estimation algorithm.
-    Efficient gradient-descent based sensor fusion.
+    Madgwick姿态估计
+    用梯度下降法融合陀螺仪和加速度计
+    比卡尔曼简单，速度快，适合我们这种小机器人
     """
-    def __init__(self, sample_period: float = 0.01, beta: float = 0.1):
-        self.dt = sample_period
-        self.beta = beta  # Filter gain
-        self.q = np.array([1.0, 0.0, 0.0, 0.0])  # Quaternion: [w, x, y, z]
+    def __init__(self, dt=0.01, beta=0.1):
+        self.dt = dt  # 采样时间
+        self.beta = beta  # 滤波增益
+        self.q = np.array([1.0, 0.0, 0.0, 0.0])  # 四元数
         
-    def update_imu(self, gyro: np.ndarray, accel: np.ndarray):
+    def update(self, gyro, accel):
         """
-        Update attitude with gyroscope and accelerometer.
-        gyro: (3,) angular velocity [roll_rate, pitch_rate, yaw_rate] rad/s
-        accel: (3,) acceleration [ax, ay, az] m/s^2
+        更新姿态
+        gyro是角速度[roll, pitch, yaw]，单位rad/s
+        accel是加速度计[x, y, z]
         """
         q = self.q
         
-        # Normalize accelerometer measurement
+        # 加速度计归一化
         accel = accel / np.linalg.norm(accel)
         
-        # Gradient descent correction
-        # Objective function: direction of gravity estimate
+        # 梯度下降修正
         wx, wy, wz = gyro
         qw, qx, qy, qz = q
         
-        # Gradient of cost function
+        # 代价函数的梯度
         f = np.array([
             2*(qx*qz - qw*qy) - accel[0],
             2*(qw*qx + qy*qz) - accel[1],
             2*(0.5 - qx*qx - qy*qy) - accel[2]
         ])
         
-        # Jacobian transpose
+        # 雅可比转置
         jt = np.array([
             [-2*qz,  2*qy, -2*qx],
             [ 2*qy,  2*qz,  2*qw],
@@ -47,11 +44,10 @@ class MadgwickAHRS:
             [ 2*qx,  2*qw,  2*qz]
         ])
         
-        # Gradient descent step
         gradient = jt @ f
         gradient = gradient / np.linalg.norm(gradient)
         
-        # Quaternion derivative from gyro
+        # 四元数导数
         q_dot = 0.5 * np.array([
             -qx*wx - qy*wy - qz*wz,
              qw*wx + qy*wz - qz*wy,
@@ -59,12 +55,14 @@ class MadgwickAHRS:
              qw*wz + qx*wy - qy*wx
         ])
         
-        # Apply correction
+        # 更新四元数
         self.q = q + self.dt * (q_dot - self.beta * gradient)
         self.q = self.q / np.linalg.norm(self.q)
         
-    def get_euler(self) -> tuple:
-        """Return (roll, pitch, yaw) in radians"""
+    def get_euler(self):
+        """
+        转换成欧拉角，返回(roll, pitch, yaw)
+        """
         qw, qx, qy, qz = self.q
         
         roll = np.arctan2(2*(qw*qx + qy*qz), 1 - 2*(qx*qx + qy*qy))
@@ -76,25 +74,22 @@ class MadgwickAHRS:
 
 class QuadIMUFusion:
     """
-    Multi-IMU array fusion: averages 4 IMU readings for robustness.
-    Reduces noise and drift compared to single IMU.
+    四个IMU融合
+    就是把四个陀螺仪的数据平均一下，更稳
     """
-    def __init__(self, num_imus: int = 4, sample_period: float = 0.01):
-        self.num_imus = num_imus
-        self.filters = [MadgwickAHRS(sample_period) for _ in range(num_imus)]
+    def __init__(self, n_imus=4):
+        self.n = n_imus
+        self.filters = [Madgwick() for _ in range(n_imus)]
         
-    def update(self, gyro_data: np.ndarray, accel_data: np.ndarray):
+    def update(self, gyros, accels):
         """
-        Fuse data from multiple IMUs.
-        gyro_data: (num_imus, 3) angular velocity readings
-        accel_data: (num_imus, 3) acceleration readings
-        Returns: average (roll, pitch, yaw) in radians
+        gyros形状是(4, 3)，四个陀螺仪的数据
+        accels形状是(4, 3)，四个加速度计的数据
+        返回平均后的(roll, pitch, yaw)
         """
         eulers = []
-        for i in range(self.num_imus):
-            self.filters[i].update_imu(gyro_data[i], accel_data[i])
+        for i in range(self.n):
+            self.filters[i].update(gyros[i], accels[i])
             eulers.append(self.filters[i].get_euler())
             
-        # Average across IMUs
-        eulers = np.array(eulers)
         return np.mean(eulers, axis=0)

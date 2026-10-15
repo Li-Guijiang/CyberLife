@@ -1,60 +1,47 @@
-"""
-Triangle Gait Generator for 8-Limb Bionic Platform
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化八足三角步态静态稳定性 | 软著标记
-Statically stable tripod gait: 3 legs stance, 3 legs swing, 2 legs transition
-Reference: Stanford Doggo, ANYmal locomotion controllers
-"""
+# 三角步态生成器
+# 参考了Stanford Doggo的三脚架步态，改成八足的版本
+# 这个步态最稳，任何时候都有4条腿踩在地上，不会翻
 import numpy as np
 
-class TriangleGaitGenerator:
+class TriangleGait:
     """
-    Triangle (Tripod) gait generator.
-    Divides legs into two alternating groups for static stability.
-    Stability: Very High | Speed: Medium | Terrain: Any
+    三角步态（三脚架步态）
+    把8条腿分成两组，一组站着的时候另一组迈腿
+    这样任何时候都有至少4条腿在地上，静态稳定
     """
-    def __init__(self, num_legs: int = 8, freq: float = 1.2,
-                 step_length: float = 0.12, lift_height: float = 0.06):
-        self.num_legs = num_legs
+    def __init__(self, num_legs=8, freq=1.2):
+        self.n = num_legs
         self.freq = freq
-        self.step_length = step_length
-        self.lift_height = lift_height
         self.phase = 0.0
-        
-        # Group A: legs 0,2,5,7 | Group B: legs 1,3,4,6
+        # 分组：A组和B组交替动
         self.group_a = [0, 2, 5, 7]
         self.group_b = [1, 3, 4, 6]
         
-    def update(self, dt: float) -> np.ndarray:
+    def step(self, dt):
         """
-        Update gait state.
-        Returns: (num_legs, 3) joint angles
+        更新步态，返回所有腿的关节角
         """
         self.phase = (self.phase + self.freq * dt) % (2 * np.pi)
-        joint_angles = np.zeros((self.num_legs, 3))
+        angles = np.zeros((self.n, 3))
         
-        for leg in range(self.num_legs):
-            if leg in self.group_a:
-                local_phase = self.phase
+        for i in range(self.n):
+            if i in self.group_a:
+                p = self.phase
             else:
-                local_phase = self.phase + np.pi
+                p = self.phase + np.pi
                 
-            is_swing = np.sin(local_phase) > 0
+            swing = np.sin(p) > 0
             
-            if is_swing:
-                # Swing: parabolic trajectory
-                t = (np.sin(local_phase) + 1) / 2  # Normalize to 0-1
-                joint_angles[leg, 0] = self.step_length * np.cos(local_phase)
-                joint_angles[leg, 1] = self.lift_height * 4 * t * (1 - t)
-                joint_angles[leg, 2] = -0.5 * joint_angles[leg, 1]
+            if swing:
+                # 摆动相：抛物线轨迹，中间抬最高
+                t = (np.sin(p) + 1) / 2
+                angles[i, 0] = 0.12 * np.cos(p)
+                angles[i, 1] = 0.06 * 4 * t * (1 - t)  # 抛物线抬脚
+                angles[i, 2] = -0.5 * angles[i, 1]
             else:
-                # Stance: constant contact
-                joint_angles[leg, 0] = self.step_length * np.cos(local_phase)
-                joint_angles[leg, 1] = 0.02  # Slight bend
-                joint_angles[leg, 2] = 0.0
+                # 支撑相：脚踩在地上不动
+                angles[i, 0] = 0.12 * np.cos(p)
+                angles[i, 1] = 0.02
+                angles[i, 2] = 0.0
                 
-        return joint_angles
-    
-    def get_stability_margin(self) -> float:
-        """Calculate static stability margin for triangle gait"""
-        # Simple approximation: min distance from CoG to support polygon edge
-        return self.step_length * 0.8  # Conservative estimate
+        return angles

@@ -1,68 +1,58 @@
-"""
-YOLOv7 Object Detection Module
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，移除动物类别，封装独立检测函数 | 软著标记
-Reference: Ultralytics YOLOv7, open-source object detection framework
-NOTE: Animal classes have been REMOVED per project requirements.
-Only obstacle/object/plant categories retained.
-"""
+# YOLOv7目标检测
+# 参考了Ultralytics的YOLO实现，改了我们自己的类别列表
+# 按老师要求，动物类别全部删掉了，只留障碍物和物品
 import numpy as np
 
-# Detection class list - ANIMAL CLASSES REMOVED
-# Only keep: obstacles, objects, vegetation, structures
+# 我们要识别的类别，动物都去掉了
+# 原来COCO里的bird, cat, dog, horse, sheep, cow这些全删了
 ALLOWED_CLASSES = {
     0: 'person',
     1: 'bicycle', 2: 'car', 3: 'motorcycle', 5: 'bus', 7: 'truck',
-    9: 'traffic light', 11: 'stop sign', 12: 'parking meter', 13: 'bench',
-    # NOTE: bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
-    # All animal classes REMOVED per project requirements
-    24: 'backpack', 25: 'umbrella', 26: 'handbag', 27: 'tie', 28: 'suitcase',
-    32: 'sports ball', 33: 'kite', 34: 'baseball bat', 35: 'baseball glove',
-    36: 'skateboard', 37: 'surfboard', 38: 'tennis racket',
-    39: 'bottle', 41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon', 45: 'bowl',
-    46: 'banana', 47: 'apple', 48: 'sandwich', 49: 'orange', 50: 'broccoli',
-    51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut', 55: 'cake',
-    56: 'chair', 57: 'couch', 58: 'potted plant', 59: 'bed',
-    60: 'dining table', 62: 'toilet', 63: 'tv', 64: 'laptop', 65: 'mouse',
-    66: 'remote', 67: 'keyboard', 68: 'cell phone', 69: 'microwave',
-    70: 'oven', 71: 'toaster', 72: 'sink', 73: 'refrigerator', 74: 'book',
-    75: 'clock', 76: 'vase', 77: 'scissors', 78: 'teddy bear',
-    79: 'hair drier', 80: 'toothbrush',
+    9: 'traffic light', 11: 'stop sign', 12: 'bench',
+    # 动物类别已全部移除！！！
+    24: 'backpack', 25: 'umbrella', 26: 'handbag', 28: 'suitcase',
+    32: 'sports ball', 34: 'baseball bat',
+    39: 'bottle', 41: 'cup', 45: 'bowl',
+    46: 'banana', 47: 'apple', 50: 'broccoli', 51: 'carrot',
+    56: 'chair', 57: 'couch', 58: 'potted plant',
+    60: 'dining table', 63: 'tv', 64: 'laptop', 67: 'keyboard', 68: 'cell phone',
+    73: 'refrigerator', 74: 'book', 75: 'clock', 76: 'vase',
 }
 
-class PanoramicDetector:
+class ObjectDetector:
     """
-    Object detection wrapper for panoramic camera feed.
-    Detection logic encapsulated as standalone callable function.
-    Animal categories EXCLUDED per system requirements.
+    目标检测器
+    就是把摄像头拍到的东西框出来，告诉你这是啥
+    已经把动物类别全部过滤掉了
     """
-    def __init__(self, confidence_threshold: float = 0.5):
-        self.conf_threshold = confidence_threshold
-        self.allowed_classes = list(ALLOWED_CLASSES.keys())
+    def __init__(self, conf_thresh=0.5):
+        self.conf = conf_thresh
+        self.allowed = list(ALLOWED_CLASSES.keys())
         
-    def detect(self, frame: np.ndarray) -> list:
+    def detect(self, frame):
         """
-        Run object detection on input frame.
-        Wrapped as independent function per requirements.
-        Returns: list of detections {bbox, class_name, confidence}
+        检测一帧图像里的物体
+        frame是摄像头拍的一帧
+        返回检测到的物体列表
         """
-        # In production: call YOLOv7 inference engine here
-        # detections = yolo_model(frame, conf=self.conf_threshold)
-        
-        # Placeholder structure
+        # 实际用的时候这里调YOLO模型
+        # results = model(frame, conf=self.conf)
         results = []
-        # Example detection output structure:
+        
+        # 示例返回结构
         # results.append({
         #     'bbox': [x1, y1, x2, y2],
-        #     'class_id': class_id,
-        #     'class_name': ALLOWED_CLASSES.get(class_id, 'unknown'),
+        #     'class_id': cid,
+        #     'class_name': name,
         #     'confidence': conf
         # })
+        
         return results
     
-    def filter_animal_classes(self, detections: list) -> list:
+    def filter_animals(self, detections):
         """
-        Filter out any animal class detections.
-        Redundant safety check - animal classes already excluded from model.
+        过滤掉动物类别
+        双保险，就算模型出来了动物，这里也再删一遍
         """
-        animal_ids = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23]  # COCO animal class IDs
+        animal_ids = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
         return [d for d in detections if d['class_id'] not in animal_ids]

@@ -1,65 +1,62 @@
-"""
-Common Spatial Pattern (CSP) Filtering + SVM Classification
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化CSP特征提取与SVM分类 | 软著标记
-Reference: sktime, braindecode BCI toolbox
-"""
+# CSP共空间模式 + SVM分类
+# 参考了braindecode的CSP实现，改了简化版
+# 脑电信号特征提取常用这个方法，能把两类信号分开
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-class CSPSpatialFilter:
+class CSPFilter:
     """
-    Common Spatial Pattern filter for EEG feature enhancement.
-    Maximizes variance difference between two motor imagery classes.
+    共空间模式滤波
+    就是找一组空间滤波器，让两类运动想象的信号方差差最大
+    这样后面分类就好分了
     """
-    def __init__(self, n_components: int = 6):
-        self.n_components = n_components
-        self.filters_ = None
+    def __init__(self, n_comp=6):
+        self.n_comp = n_comp
+        self.filters = None
         
-    def fit(self, epochs: np.ndarray, labels: np.ndarray):
+    def fit(self, epochs, labels):
         """
-        Compute CSP filters from labeled epochs.
-        epochs: (n_samples, n_channels, n_times)
-        labels: (n_samples,) binary labels
+        训练CSP滤波器
+        epochs形状是(样本数, 通道数, 时间点)
+        labels是对应的标签，0和1两类
         """
-        class_0 = epochs[labels == 0]
-        class_1 = epochs[labels == 1]
+        class0 = epochs[labels == 0]
+        class1 = epochs[labels == 1]
         
-        # Compute average covariance matrices
-        cov_0 = np.mean([np.cov(e) for e in class_0], axis=0)
-        cov_1 = np.mean([np.cov(e) for e in class_1], axis=0)
+        # 算两类的平均协方差矩阵
+        cov0 = np.mean([np.cov(e) for e in class0], axis=0)
+        cov1 = np.mean([np.cov(e) for e in class1], axis=0)
         
-        # Solve generalized eigenvalue problem
-        eig_vals, eig_vecs = np.linalg.eig(
-            np.linalg.inv(cov_0 + cov_1) @ cov_1
-        )
+        # 解广义特征值问题
+        eigvals, eigvecs = np.linalg.eig(np.linalg.inv(cov0 + cov1) @ cov1)
         
-        # Sort by eigenvalue distance from 0.5
-        sorted_idx = np.argsort(np.abs(eig_vals.real - 0.5))
-        self.filters_ = eig_vecs[:, sorted_idx[:self.n_components]].real
+        # 挑特征值离0.5最远的那几个，区分度最大
+        idx = np.argsort(np.abs(eigvals.real - 0.5))
+        self.filters = eigvecs[:, idx[:self.n_comp]].real
         
-    def transform(self, epochs: np.ndarray) -> np.ndarray:
+    def transform(self, epochs):
         """
-        Project epochs onto CSP subspace and extract log-variance features.
-        Returns: (n_samples, n_components) feature matrix
+        把信号投影到CSP空间，提取对数方差特征
+        返回形状是(样本数, 特征数)
         """
-        projected = np.array([self.filters_.T @ e for e in epochs])
+        projected = np.array([self.filters.T @ e for e in epochs])
         features = np.log(np.var(projected, axis=2))
         return features
 
 
 class BCIClassifier:
     """
-    Combined CSP + SVM classifier for motor imagery BCI.
+    CSP + SVM 组合分类器
+    先CSP提特征，再SVM分类
     """
-    def __init__(self, n_components: int = 6):
-        self.csp = CSPSpatialFilter(n_components)
-        self.clf = SVC(kernel='rbf', C=1.0)
+    def __init__(self, n_comp=6):
+        self.csp = CSPFilter(n_comp)
+        self.svm = SVC(kernel='rbf', C=1.0)
         
-    def fit(self, epochs: np.ndarray, labels: np.ndarray):
+    def fit(self, epochs, labels):
         features = self.csp.fit_transform(epochs, labels)
-        self.clf.fit(features, labels)
+        self.svm.fit(features, labels)
         
-    def predict(self, epochs: np.ndarray) -> np.ndarray:
+    def predict(self, epochs):
         features = self.csp.transform(epochs)
-        return self.clf.predict(features)
+        return self.svm.predict(features)

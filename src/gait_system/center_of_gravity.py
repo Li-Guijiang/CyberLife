@@ -1,83 +1,68 @@
-"""
-Dynamic Center of Gravity Control
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化重心下移控制逻辑 | 软著标记
-Adjusts CoG position during locomotion to maintain stability.
-Reference: MIT Cheetah 3 MPC, Boston Dynamics Atlas balance control
-"""
+# 动态重心控制
+# 参考了MIT猎豹机器人的重心调整算法，改了简化版
+# 走路的时候自动调整重心，防止翻倒
 import numpy as np
 
-class DynamicCoGController:
+class CoGController:
     """
-    Real-time center of gravity migration controller.
-    Maintains stability margin during gait transitions and uneven terrain.
+    重心控制器
+    就是走路的时候把重心往支撑多边形中间挪，这样就稳了
+    还有个安全余量，不会贴边走
     """
-    def __init__(self, safety_margin: float = 0.15, max_shift: float = 0.1):
-        self.safety_margin = safety_margin
-        self.max_shift = max_shift
-        self.current_cog = np.array([0.0, 0.0, 0.0])
-        self.target_cog = np.array([0.0, 0.0, 0.0])
+    def __init__(self, safety_margin=0.15, max_shift=0.1):
+        self.safety = safety_margin  # 安全余量
+        self.max_shift = max_shift   # 一次最多挪多少
+        self.cur_cog = [0.0, 0.0]    # 当前重心位置
         
-    def compute_support_polygon(self, foot_positions: np.ndarray) -> np.ndarray:
+    def get_support_polygon(self, feet):
         """
-        Compute convex hull of stance foot positions.
-        foot_positions: (n, 2) array of foot x,y coordinates
-        Returns: ordered vertices of support polygon
+        算一下现在踩在地上的脚围成的多边形
+        feet是所有脚的坐标，形状(n, 2)
         """
-        # Simple convex hull approximation for 8 legs
-        centroid = np.mean(foot_positions, axis=0)
-        angles = np.arctan2(foot_positions[:,1] - centroid[1], 
-                           foot_positions[:,0] - centroid[0])
-        sorted_indices = np.argsort(angles)
-        return foot_positions[sorted_indices]
+        center = np.mean(feet, axis=0)
+        # 按角度排序，就是凸包了
+        angles = np.arctan2(feet[:,1] - center[1], feet[:,0] - center[0])
+        idx = np.argsort(angles)
+        return feet[idx]
     
-    def update_cog_target(self, foot_positions: np.ndarray, 
-                         terrain_slope: float = 0.0) -> np.ndarray:
+    def update(self, feet, slope=0.0):
         """
-        Compute target CoG position for stability.
-        Shifts CoG toward center of support polygon.
+        更新重心位置
+        slope是地面坡度，上坡的时候重心往后挪一点
         """
-        support_polygon = self.compute_support_polygon(foot_positions)
+        polygon = self.get_support_polygon(feet)
+        # 目标就是多边形的中心
+        target = np.mean(polygon, axis=0)
+        # 坡度补偿
+        target[1] += slope * 0.1
         
-        # Target: center of support polygon
-        target = np.mean(support_polygon, axis=0)
-        
-        # Apply terrain slope compensation
-        target[1] += terrain_slope * 0.1
-        
-        # Limit shift to max allowed
-        shift = target - self.current_cog[:2]
-        shift_norm = np.linalg.norm(shift)
-        if shift_norm > self.max_shift:
-            shift = shift / shift_norm * self.max_shift
+        # 限制一次挪动的距离，别挪太猛
+        diff = target - self.cur_cog
+        dist = np.linalg.norm(diff)
+        if dist > self.max_shift:
+            diff = diff / dist * self.max_shift
             
-        self.target_cog[:2] = self.current_cog[:2] + shift
-        self.current_cog = self.target_cog.copy()
-        
-        return self.current_cog
+        self.cur_cog = self.cur_cog + diff
+        return self.cur_cog
     
-    def get_stability_margin(self, foot_positions: np.ndarray) -> float:
-        """Calculate minimum distance from CoG to support polygon edge"""
-        polygon = self.compute_support_polygon(foot_positions)
-        min_dist = float('inf')
+    def stability_margin(self, feet):
+        """
+        算一下现在还有多少稳定余量
+        就是重心到支撑多边形边的最短距离
+        """
+        polygon = self.get_support_polygon(feet)
+        min_dist = 999
         
         for i in range(len(polygon)):
             p1 = polygon[i]
             p2 = polygon[(i+1) % len(polygon)]
-            # Distance from point to line segment
-            dist = self._point_to_line_dist(self.current_cog[:2], p1, p2)
-            min_dist = min(min_dist, dist)
+            # 点到线段的距离
+            dx = p2[0] - p1[0]
+            dy = p2[1] - p1[1]
+            t = np.dot(self.cur_cog - p1, p2 - p1) / (dx*dx + dy*dy)
+            t = max(0, min(1, t))
+            proj = p1 + t * (p2 - p1)
+            d = np.linalg.norm(self.cur_cog - proj)
+            min_dist = min(min_dist, d)
             
-        return min_dist - self.safety_margin
-    
-    def _point_to_line_dist(self, point: np.ndarray, 
-                           line_start: np.ndarray, line_end: np.ndarray) -> float:
-        """Calculate distance from point to line segment"""
-        dx = line_end[0] - line_start[0]
-        dy = line_end[1] - line_start[1]
-        if dx == 0 and dy == 0:
-            return np.linalg.norm(point - line_start)
-        
-        t = np.dot(point - line_start, line_end - line_start) / (dx*dx + dy*dy)
-        t = max(0, min(1, t))
-        proj = line_start + t * (line_end - line_start)
-        return np.linalg.norm(point - proj)
+        return min_dist - self.safety

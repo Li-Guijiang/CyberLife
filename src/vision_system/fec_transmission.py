@@ -1,76 +1,70 @@
-"""
-FEC (Forward Error Correction) for Robust Video Streaming
-[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，视频流抗丢包传输 | 软著标记
-Reference: open-source FEC libraries for real-time media
-Protects video stream against packet loss in unreliable networks.
-"""
+# FEC前向纠错传输
+# 参考了OpenFEC和WebRTC的FEC机制，做了简化版
+# 弱网环境下丢包了也能恢复，不用重传
 import numpy as np
 
-class FECPacketEncoder:
+class FECEncoder:
     """
-    XOR-based FEC encoder for video streaming.
-    Generates parity packets that allow reconstruction of lost data.
+    FEC前向纠错编码器
+    就是把几个包异或一下生成一个校验包
+    丢一个包的话，用校验包就能恢复出来
+    比重传快，适合实时视频
     """
-    def __init__(self, data_shards: int = 4, parity_shards: int = 2):
-        """
-        Args:
-            data_shards: number of data packets per group
-            parity_shards: number of parity packets per group
-        """
-        self.k = data_shards
-        self.m = parity_shards
+    def __init__(self, group_size=4):
+        self.n = group_size  # 每4个数据包加1个校验包
         
-    def encode(self, packet: bytes) -> list:
+    def encode(self, packets):
         """
-        Split packet into data shards and generate parity shards.
-        Returns: list of shards (data + parity)
+        对一组数据包编码
+        packets是n个数据包的列表
+        返回加了校验包的列表
         """
-        shard_size = len(packet) // self.k
-        data_shards = [
-            packet[i*shard_size:(i+1)*shard_size]
-            for i in range(self.k)
-        ]
-        
-        parity_shards = []
-        for p in range(self.m):
-            parity = bytearray(shard_size)
-            for s in range(self.k):
-                # XOR combination pattern based on shard index and parity index
-                if (s >> p) & 1:
-                    for j in range(shard_size):
-                        parity[j] ^= data_shards[s][j]
-            parity_shards.append(bytes(parity))
+        if len(packets) < self.n:
+            return packets
             
-        return data_shards + parity_shards
+        # 异或所有包生成校验包
+        parity = packets[0]
+        for p in packets[1:]:
+            parity = bytes(a ^ b for a, b in zip(parity, p))
+            
+        return list(packets) + [parity]
     
-    def decode(self, received_shards: list) -> bytes:
+    def decode(self, received):
         """
-        Reconstruct original data from received shards.
-        Works as long as at least k shards are received.
+        解码，如果丢了一个包就恢复
+        received是收到的包，可能缺一个
         """
-        if len(received_shards) < self.k:
-            raise ValueError("Insufficient shards for reconstruction")
+        if len(received) == self.n + 1:
+            return received[:-1]  # 全收到了，去掉校验包
         
-        # If all data shards received, simple concatenation
-        if len(received_shards) >= self.k:
-            return b''.join(received_shards[:self.k])
-        
-        # Otherwise, reconstruct missing shards using parity
-        # (Full Reed-Solomon implementation omitted for brevity)
-        raise NotImplementedError("Reconstruction from parity shards")
+        # 丢了一个包，用校验包恢复
+        if len(received) == self.n:
+            # 找出丢的是哪个，异或其他所有包
+            recovered = bytes(self.n)
+            for p in received:
+                recovered = bytes(a ^ b for a, b in zip(recovered, p))
+            return list(received) + [recovered]
+            
+        return received
 
 
-class VideoStreamTransmitter:
+class VideoStream:
     """
-    Robust video stream transmitter with FEC protection.
+    视频流传输封装
+    就是把编码好的视频包发出去，带FEC保护
     """
-    def __init__(self, fec: FECPacketEncoder = None):
-        self.fec = fec or FECPacketEncoder()
+    def __init__(self):
+        self.fec = FECEncoder(group_size=4)
+        self.buffer = []
         
-    def send_frame(self, frame_data: bytes) -> list:
-        """Prepare frame data for transmission"""
-        return self.fec.encode(frame_data)
-    
-    def receive_frame(self, received_shards: list) -> bytes:
-        """Reconstruct frame data from received shards"""
-        return self.fec.decode(received_shards)
+    def send_frame(self, frame_data):
+        """
+        发一帧数据
+        """
+        self.buffer.append(frame_data)
+        if len(self.buffer) >= 4:
+            packets = self.fec.encode(self.buffer)
+            # 实际这里发网络包
+            self.buffer = []
+            return packets
+        return None
