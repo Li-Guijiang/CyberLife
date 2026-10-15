@@ -45,7 +45,9 @@ class Madgwick:
         ])
         
         gradient = jt @ f
-        gradient = gradient / np.linalg.norm(gradient)
+        norm = np.linalg.norm(gradient)
+        if norm > 1e-6:
+            gradient = gradient / norm
         
         # 四元数导数
         q_dot = 0.5 * np.array([
