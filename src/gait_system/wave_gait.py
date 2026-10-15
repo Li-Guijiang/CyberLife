@@ -1,5 +1,6 @@
 """
 Wave Gait Generator for 8-Limb Bionic Platform
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化八足波浪步态生成 | 软著标记
 Based on open-source legged robot gait generation algorithms
 Reference: MIT Mini Cheetah, OLOC locomotion frameworks
 """

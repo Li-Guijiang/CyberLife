@@ -1,5 +1,6 @@
 """
 FEC (Forward Error Correction) for Robust Video Streaming
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，视频流抗丢包传输 | 软著标记
 Reference: open-source FEC libraries for real-time media
 Protects video stream against packet loss in unreliable networks.
 """

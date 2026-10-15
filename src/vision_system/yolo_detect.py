@@ -1,5 +1,6 @@
 """
 YOLOv7 Object Detection Module
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，移除动物类别，封装独立检测函数 | 软著标记
 Reference: Ultralytics YOLOv7, open-source object detection framework
 NOTE: Animal classes have been REMOVED per project requirements.
 Only obstacle/object/plant categories retained.

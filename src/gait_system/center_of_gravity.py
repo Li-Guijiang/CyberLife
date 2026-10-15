@@ -1,5 +1,6 @@
 """
 Dynamic Center of Gravity Control
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化重心下移控制逻辑 | 软著标记
 Adjusts CoG position during locomotion to maintain stability.
 Reference: MIT Cheetah 3 MPC, Boston Dynamics Atlas balance control
 """

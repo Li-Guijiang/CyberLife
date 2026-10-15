@@ -1,5 +1,6 @@
 """
 H.265/SVC Scalable Video Coding Module
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，全景视频分层编码 | 软著标记
 Reference: FFmpeg/libx265, open-source video codec libraries
 Implements layered encoding for panoramic video:
 - Base layer: low bitrate, wide FOV (far view)

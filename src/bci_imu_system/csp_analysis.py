@@ -1,5 +1,6 @@
 """
 Common Spatial Pattern (CSP) Filtering + SVM Classification
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化CSP特征提取与SVM分类 | 软著标记
 Reference: sktime, braindecode BCI toolbox
 """
 import numpy as np

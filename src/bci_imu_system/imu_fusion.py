@@ -1,5 +1,6 @@
 """
 Quad-IMU Attitude Fusion using Extended Kalman Filter
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，四陀螺仪姿态融合算法 | 软著标记
 Reference: ROS imu_filter_madgwick, filterpy library
 Fuses 4 gyroscope + accelerometer readings for robust pose estimation
 """

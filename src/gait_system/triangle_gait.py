@@ -1,5 +1,6 @@
 """
 Triangle Gait Generator for 8-Limb Bionic Platform
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化八足三角步态静态稳定性 | 软著标记
 Statically stable tripod gait: 3 legs stance, 3 legs swing, 2 legs transition
 Reference: Stanford Doggo, ANYmal locomotion controllers
 """

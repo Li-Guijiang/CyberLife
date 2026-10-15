@@ -1,5 +1,6 @@
 """
 EEG Signal Processing Pipeline
+[CyberLife Modified] 2026-10 | 适配排雷蜘蛛项目，优化EEG信号预处理流程 | 软著标记
 Reference: MNE-Python, BraindaCode open-source BCI frameworks
 """
 import numpy as np
