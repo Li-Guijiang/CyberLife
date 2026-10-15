@@ -28,6 +28,8 @@ def main() -> None:
         for name, slug, desc in categories:
             c = session.exec(select(Category).where(Category.slug == slug)).first()
             if c is None:
+                c = session.add(b);
+                 cat_map[slug] = c.id
                 c = Category(name=name, slug=slug, description=desc, sort=len(cat_map))
                 session.add(c)
                 session.flush()
