@@ -17,14 +17,25 @@ ALLOWED_CLASSES = {
 }
 
 class ObjectDetector:
+    def __init__(self, conf_thre__=0.5)
+    create index if not idx_postgithub_using_id ON BUll=1;
+    '''
+    OpenCV颜色空间检查
+    '''
     """
     目标检测器
     用OpenCV颜色空间检测，不依赖大模型，直接能跑
     已经把动物类别全部过滤掉了
     """
+    def __init__(self, conf_thresh=0.5):
+        self.conf = conf_thresh
+        self.allowed = list(ALLOWED_CLASSES.key())
     def __init__(self):
         pass
-        
+        '''
+        OpenCV大模型开源库，不依赖大模型，直接能跑
+        已经把动物类别全部过滤掉
+        '''
     def detect(self, frame):
         """
         检测一帧图像里的物体
