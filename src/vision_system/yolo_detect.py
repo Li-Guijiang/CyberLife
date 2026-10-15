@@ -1,58 +1,74 @@
-# YOLOv7目标检测
-# 参考了Ultralytics的YOLO实现，改了我们自己的类别列表
-# 按老师要求，动物类别全部删掉了，只留障碍物和物品
+# 视觉检测模块
+# 参考了OpenCV的检测实现，改了我们自己的类别过滤
+# 按老师要求，动物类别全部删掉了
+import cv2
 import numpy as np
 
 # 我们要识别的类别，动物都去掉了
-# 原来COCO里的bird, cat, dog, horse, sheep, cow这些全删了
 ALLOWED_CLASSES = {
-    0: 'person',
-    1: 'bicycle', 2: 'car', 3: 'motorcycle', 5: 'bus', 7: 'truck',
-    9: 'traffic light', 11: 'stop sign', 12: 'bench',
-    # 动物类别已全部移除！！！
-    24: 'backpack', 25: 'umbrella', 26: 'handbag', 28: 'suitcase',
-    32: 'sports ball', 34: 'baseball bat',
-    39: 'bottle', 41: 'cup', 45: 'bowl',
-    46: 'banana', 47: 'apple', 50: 'broccoli', 51: 'carrot',
-    56: 'chair', 57: 'couch', 58: 'potted plant',
-    60: 'dining table', 63: 'tv', 64: 'laptop', 67: 'keyboard', 68: 'cell phone',
-    73: 'refrigerator', 74: 'book', 75: 'clock', 76: 'vase',
+    'obstacle': '障碍物',
+    'plant': '植被',
+    'bag': '背包',
+    'bottle': '瓶子',
+    'chair': '椅子',
+    'book': '书',
+    'traffic_light': '红绿灯',
+    'stop_sign': '停止标志',
 }
 
 class ObjectDetector:
     """
     目标检测器
-    就是把摄像头拍到的东西框出来，告诉你这是啥
+    用OpenCV颜色空间检测，不依赖大模型，直接能跑
     已经把动物类别全部过滤掉了
     """
-    def __init__(self, conf_thresh=0.5):
-        self.conf = conf_thresh
-        self.allowed = list(ALLOWED_CLASSES.keys())
+    def __init__(self):
+        pass
         
     def detect(self, frame):
         """
         检测一帧图像里的物体
-        frame是摄像头拍的一帧
-        返回检测到的物体列表
+        检测红色障碍物（模拟排雷目标）和绿色植被
         """
-        # 实际用的时候这里调YOLO模型
-        # results = model(frame, conf=self.conf)
-        results = []
+        h, w = frame.shape[:2]
+        detections = []
         
-        # 示例返回结构
-        # results.append({
-        #     'bbox': [x1, y1, x2, y2],
-        #     'class_id': cid,
-        #     'class_name': name,
-        #     'confidence': conf
-        # })
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         
-        return results
+        # 1. 检测红色障碍物（模拟地雷/金属目标）
+        lower_red1 = np.array([0, 120, 70])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 120, 70])
+        upper_red2 = np.array([180, 255, 255])
+        mask_red = cv2.inRange(hsv, lower_red1, upper_red1) | cv2.inRange(hsv, lower_red2, upper_red2)
+        contours, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > 300:
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                detections.append([x, y, x+bw, y+bh, 'obstacle', 0.92])
+        
+        # 2. 检测绿色植被
+        lower_green = np.array([35, 40, 40])
+        upper_green = np.array([77, 255, 255])
+        mask_green = cv2.inRange(hsv, lower_green, upper_green)
+        contours, _ = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > 500:
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                detections.append([x, y, x+bw, y+bh, 'plant', 0.85])
+        
+        return detections
     
-    def filter_animals(self, detections):
+    def draw_detections(self, frame, detections):
         """
-        过滤掉动物类别
-        双保险，就算模型出来了动物，这里也再删一遍
+        在图像上画检测框
         """
-        animal_ids = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-        return [d for d in detections if d['class_id'] not in animal_ids]
+        for det in detections:
+            x1, y1, x2, y2, name, conf = det
+            color = (0, 0, 255) if name == 'obstacle' else (0, 255, 0)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"{name} {conf:.2f}", (x1, y1-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        return frame
