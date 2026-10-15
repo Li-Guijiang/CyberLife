@@ -3,6 +3,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+
+# 解决matplotlib中文显示方块的问题
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
+
 from src.gait_system.wave_gait import WaveGait
 from src.gait_system.triangle_gait import TriangleGait
 from src.gait_system.alternating_gait import AlternatingGait
