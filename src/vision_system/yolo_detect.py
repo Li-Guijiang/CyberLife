@@ -28,14 +28,14 @@ class ObjectDetector:
     def detect(self, frame):
         """
         检测一帧图像里的物体
-        检测红色障碍物（模拟排雷目标）和绿色植被
+        检测红色障碍物（模拟金属目标）和绿色植被
         """
         h, w = frame.shape[:2]
         detections = []
         
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         
-        # 1. 检测红色障碍物（模拟地雷/金属目标）
+        # 1. 检测红色障碍物（模拟金属目标）
         lower_red1 = np.array([0, 120, 70])
         upper_red1 = np.array([10, 255, 255])
         lower_red2 = np.array([170, 120, 70])
